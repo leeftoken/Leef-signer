@@ -177,6 +177,18 @@ export async function putSecret(
   );
 }
 
+/**
+ * Names of the secrets already set on a Worker. Cloudflare never returns secret VALUES through any API, so this is
+ * safe to show: it is how the Owner secrets page confirms what is configured without reading anything back.
+ */
+export async function listSecretNames(cred: CloudflareCredentials, scriptName: string): Promise<string[]> {
+  const rows = await cf<Array<{ name: string; type: string }>>(
+    cred,
+    `/accounts/${cred.accountId}/workers/scripts/${encodeURIComponent(scriptName)}/secrets`,
+  );
+  return rows.map((r) => r.name).sort();
+}
+
 /** Best-effort: ensure the workers.dev subdomain is enabled and read the host. */
 export async function enableWorkersDev(
   cred: CloudflareCredentials,

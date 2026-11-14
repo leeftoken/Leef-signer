@@ -169,3 +169,30 @@ Call the AI event-driven, not per-trade: every N decisions, on regime change,
 on repeated failure clusters, on large predicted-vs-realized divergence, or on
 manual review. The 20 req/min ceiling assumes batching; a few calls per hour is
 the intended operating point (≈ $0.00015 per call at current PPQ pricing).
+
+## Owner secrets (`/secrets` page) and `/api/notify`
+
+The owner enters the AI keys and the Telegram bot token **once** on the signer's **Owner secrets** page (`/secrets`):
+
+- Owner auth is the owner's own Cloudflare API token (Workers Scripts:Edit). It is used only from the browser tab and is
+  never stored, the same as in the deploy wizard.
+- Values go from the tab straight to `PUT /workers/scripts/<name>/secrets`. Cloudflare encrypts Worker secrets at rest
+  and no API returns a value. The page only lists secret **names** (`GET …/secrets`) and clears the form after storing.
+- Secrets: `PPQ_API_KEY` (used by `/api/ai`), `TYPESAFE_API_KEY` (`/api/judge`), `TELEGRAM_BOT_TOKEN`, `OWNER_CHAT_ID`
+  (default 149087654), plus a random `NOTIFY_TOKEN` generated in the tab when a bot token is set.
+- Optional: download a `leef.env` for `deploy/vps-setup.sh --env` (leef-trader-tg). It is built in the tab and holds the
+  report token, chat id and notify token, with blank WAX key lines. You type WAX keys on the VPS, never here.
+
+Who reads what (the value never leaves the Worker):
+
+| Caller | Route | Uses |
+|---|---|---|
+| Serverless @LEEF_trader_bot (free-text answers) | `POST /api/ai` | `PPQ_API_KEY` |
+| LEEF Trader platform | `POST /api/ai`, `/api/judge` | `PPQ_API_KEY`, `TYPESAFE_API_KEY` |
+| Owner's VPS / ops jobs | `POST /api/notify` | `TELEGRAM_BOT_TOKEN` → `OWNER_CHAT_ID` only |
+
+`POST /api/notify` with `Authorization: Bearer <NOTIFY_TOKEN>` and `{"text":"…"}` (max 3800 chars) sends a message to
+`OWNER_CHAT_ID`. The chat is fixed server-side, so the client cannot choose it. Browser `Origin` requests are refused,
+calls are limited to 10/min per IP, and the token is compared in constant time. The route returns 404 unless all three
+secrets are set. `/api/status` reports `ownerSecrets.telegramBotToken` and `ownerSecrets.notify` as booleans only.
+The route ships in the runtime, so redeploy the Worker once from the wizard to get it. Existing secrets survive a redeploy.

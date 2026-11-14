@@ -119,3 +119,60 @@ test('generated worker source parses as an ES module (round-trip)', () => {
   assert.match(workerSource, /const __worker =/);
   assert.match(workerSource, /export default __worker;/);
 });
+
+/* ------------------------------------------------------------------ */
+/* /api/notify (owner secrets): behaviour of the generated worker      */
+/* ------------------------------------------------------------------ */
+
+async function loadWorker(manifest) {
+  const dir = mkdtempSync(join(tmpdir(), 'leef-signer-w-'));
+  const file = join(dir, 'worker.mjs');
+  writeFileSync(file, buildWorkerSource(manifest));
+  const mod = await import(file + '?t=' + Date.now());
+  return { worker: mod.default, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+}
+
+const NOTIFY_MANIFEST = {
+  version: '1', app: 'notify-test', runtimeVersion: '0.0.0-test',
+  security: { allowedOrigins: ['https://example.com'], publicAuth: { type: 'none' }, internalMode: false },
+  limits: { default: { keyBy: 'ip', requestsPerMinute: 60 }, perRoute: {} },
+  privacy: { mode: 'standard' }, routes: {}, providers: {},
+};
+const TG = '123456789:' + 'A'.repeat(35);
+const ENV = { TELEGRAM_BOT_TOKEN: TG, NOTIFY_TOKEN: 'n'.repeat(43), OWNER_CHAT_ID: '149087654' };
+const req = (headers, body) => new Request('https://w.example/api/notify', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.' + Math.floor(Math.random() * 200), ...headers },
+  body: JSON.stringify(body ?? { text: 'hello' }),
+});
+
+test('/api/notify: sends only to OWNER_CHAT_ID, needs the bearer, never echoes the bot token', async () => {
+  const { worker, cleanup } = await loadWorker(NOTIFY_MANIFEST);
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init) => { calls.push({ url: String(url), body: JSON.parse(init.body) }); return new Response('{"ok":true}', { status: 200 }); };
+  try {
+    // not configured -> looks like an unknown route
+    assert.equal((await worker.fetch(req({ Authorization: 'Bearer ' + ENV.NOTIFY_TOKEN }), {})).status, 404);
+    // wrong / missing bearer
+    assert.equal((await worker.fetch(req({ Authorization: 'Bearer wrong' }), ENV)).status, 401);
+    assert.equal((await worker.fetch(req({}), ENV)).status, 401);
+    // browsers are refused even with the right token
+    assert.equal((await worker.fetch(req({ Authorization: 'Bearer ' + ENV.NOTIFY_TOKEN, Origin: 'https://example.com' }), ENV)).status, 403);
+    // client cannot pick the chat
+    const ok = await worker.fetch(req({ Authorization: 'Bearer ' + ENV.NOTIFY_TOKEN }, { text: 'alert', chat_id: '1' }), ENV);
+    assert.equal(ok.status, 200);
+    const okText = await ok.text();
+    assert.ok(!okText.includes(TG));
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.chat_id, '149087654');
+    assert.equal(calls[0].body.text, 'alert');
+    // status shows booleans only
+    const st = await worker.fetch(new Request('https://w.example/api/status'), ENV);
+    const stText = await st.text();
+    assert.ok(!stText.includes(TG) && !stText.includes(ENV.NOTIFY_TOKEN));
+    assert.equal(JSON.parse(stText).ownerSecrets.notify, true);
+  } finally {
+    globalThis.fetch = realFetch;
+    cleanup();
+  }
+});
