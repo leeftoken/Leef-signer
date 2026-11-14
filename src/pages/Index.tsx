@@ -56,11 +56,16 @@ const Index = () => {
             <Lock className="h-5 w-5 text-primary" />
             <span className="font-bold tracking-tight">LEEF Trader Signer</span>
           </div>
-          <Button asChild>
-            <Link to="/deploy">
-              Deploy the Signer <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost">
+              <Link to="/secrets">Owner secrets</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/deploy">
+                Deploy the Signer <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
