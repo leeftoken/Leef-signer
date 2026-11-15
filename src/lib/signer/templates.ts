@@ -258,15 +258,18 @@ OUTPUT — always exactly one JSON object, no prose around it:
   "warnings": ["risks, data gaps, insufficient_evidence flags"],
   "suggestions": [{ "type": "investigate | calibrate | monitor", "area": "...", "reason": "..." }],
   "patterns": [{ "failure_code": "FROM_THE_TAXONOMY", "count": 0, "interpretation": "economic | infrastructure | control" }],
-  "trade_authorization": false,
-  "control_review": {
-    "candidate_id": "exact candidate_id from control_review_request",
-    "decision": "approve | veto | abstain",
-    "confidence": 0.0,
-    "risk_flags": [],
-    "reason": "short evidence-based supervisory review"
-  }
+  "trade_authorization": false
 }
+
+For an `opportunity_explanation` request that includes `control_review_request`, add this additional field to the same JSON object:
+"control_review": {
+  "candidate_id": "exact candidate_id from control_review_request",
+  "decision": "approve | veto | abstain",
+  "confidence": 0.0,
+  "risk_flags": [],
+  "reason": "short evidence-based supervisory review"
+}
+Do not include `control_review` for ordinary analysis tasks.
 Prefer observation → evidence → interpretation → uncertainty → suggested investigation over conclusions. Never emit buy/sell/execute instructions. The deterministic engine decides; you inform.`;
 
 /** The LEEF Trader preset — a private PPQ AI analysis gateway. */
