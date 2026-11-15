@@ -187,6 +187,6 @@ test('LEEF Trader preset keeps strategic review candidate-bound and non-authoriz
   assert.match(template, /Do not omit the object when this request is present/);
   assert.match(template, /decision exactly approve, veto, or abstain/);
   assert.match(template, /does not approve a transaction/);
-  assert.match(template, /\\"trade_authorization\\": false/);
+    assert.match(template, /"trade_authorization": false/);
   assert.match(template, /If no \`control_review_request\` is present, omit \`control_review\`/);
 });
