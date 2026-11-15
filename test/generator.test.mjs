@@ -176,3 +176,17 @@ test('/api/notify: sends only to OWNER_CHAT_ID, needs the bearer, never echoes t
     cleanup();
   }
 });
+
+/* ------------------------------------------------------------------ */
+/* LEEF Trader preset's paired strategic control-review contract       */
+/* ------------------------------------------------------------------ */
+
+test('LEEF Trader preset keeps strategic review candidate-bound and non-authorizing', () => {
+  const template = readFileSync(join(repoRoot, 'src', 'lib', 'signer', 'templates.ts'), 'utf8');
+  assert.match(template, /control_review_request/);
+  assert.match(template, /Do not omit the object when this request is present/);
+  assert.ok(template.includes("decision` (`approve`, `veto`, or `abstain`)"));
+  assert.match(template, /does not approve a transaction/);
+  assert.match(template, /"trade_authorization": false/);
+  assert.match(template, /If no \`control_review_request\` is present, omit \`control_review\`/);
+});
