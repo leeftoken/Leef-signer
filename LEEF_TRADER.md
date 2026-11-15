@@ -57,7 +57,19 @@ HTTP 200 with the upstream chat completion. The analysis JSON is at
   "warnings": ["risks, data gaps, insufficient_evidence flags"],
   "suggestions": [{ "type": "investigate | calibrate | monitor", "area": "…", "reason": "…" }],
   "patterns": [{ "failure_code": "MIN_OUT_FAILED", "count": 3, "interpretation": "economic" }],
-  "trade_authorization": false,
+  "trade_authorization": false
+}
+```
+
+`trade_authorization` is always `false` — the AI has no execution authority.
+The deterministic engine (exact quote → economic gate → risk → policy firewall)
+remains authoritative. AI output is soft information only.
+
+Only when an `opportunity_explanation` request contains
+`data.control_review_request`, the helper adds this field to the same response:
+
+```json
+{
   "control_review": {
     "candidate_id": "exact candidate_id from request",
     "decision": "approve | veto | abstain",
@@ -67,10 +79,6 @@ HTTP 200 with the upstream chat completion. The analysis JSON is at
   }
 }
 ```
-
-`trade_authorization` is always `false` — the AI has no execution authority.
-The deterministic engine (exact quote → economic gate → risk → policy firewall)
-remains authoritative. AI output is soft information only.
 
 For the coordinated LEEF Trader dual-CONTROL flow, an `opportunity_explanation`
 task may include `data.control_review_request`. The preset then requires an
