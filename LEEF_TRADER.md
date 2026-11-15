@@ -65,37 +65,26 @@ HTTP 200 with the upstream chat completion. The analysis JSON is at
 The deterministic engine (exact quote → economic gate → risk → policy firewall)
 remains authoritative. AI output is soft information only.
 
-Only when an `opportunity_explanation` request contains
-`data.control_review_request`, the helper adds this field to the same response:
+## Strategic AI Helper cadence
 
-```json
-{
-  "control_review": {
-    "candidate_id": "exact candidate_id from request",
-    "decision": "approve | veto | abstain",
-    "confidence": 0.0,
-    "risk_flags": [],
-    "reason": "short evidence-based supervisory review"
-  }
-}
-```
+The current LEEF Trader architecture uses the AI Helper for **event-driven strategic
+analysis and bounded learning**, not as a second per-trade approver. The app sends
+batched `evidence_review` tasks containing aggregate execution statistics, pool
+profiles, and structured Jev decision history. The Helper may suggest only the
+learning artifact types already supported by the deterministic Learning Governor.
+The Governor shadow-tests proposals and controls promotion; the Helper cannot
+change hard risk limits, token pairs, routes, wallet permissions, signing, or
+transaction policy.
 
-For the coordinated LEEF Trader dual-CONTROL flow, an `opportunity_explanation`
-task may include `data.control_review_request`. The preset then requires an
-additional `control_review` object in the same response. It must echo the exact
-`candidate_id` and return only an `approve`, `veto`, or `abstain` decision,
-a numeric confidence, `risk_flags` array, and short reason. An `approve` is
-only a strategic second opinion on that exact Jev proposal — it is not
-`trade_authorization` and cannot create, size, route, or submit a trade.
-Missing, malformed, mismatched, or uncertain reviews are rejected by the
-trading app and pause new entries while dual CONTROL is active.
+Jev remains the fast per-cycle judge of an existing deterministic BUY or SWAP
+candidate. It cannot create a candidate, replace the token pair or route, or
+sign. The deterministic execution gauntlet remains the only transaction authority.
+The AI Helper does not approve or veto each individual trade.
 
-**Deployment note:** updating this preset changes future generated Worker
-scripts; it does not alter an already-deployed Cloudflare Worker automatically.
-After this change is merged, redeploy the LEEF Trader AI Worker from the Signer
-so its server-controlled system prompt includes the `control_review` contract.
-Keep the trader in SUGGEST/paper mode until the deployed Worker has passed the
-approve, veto, abstain, malformed-response, and candidate-mismatch checks.
+The optional `control_review_request` / `control_review` response shape is a
+legacy compatibility field in the preset, not part of the current LEEF Trader
+main-branch control flow. Do not enable a per-trade dual-approval mode based on
+that legacy field. Current Helper operation is event-driven and evidence-based.
 
 ## Failure modes (fail-safe by design)
 
