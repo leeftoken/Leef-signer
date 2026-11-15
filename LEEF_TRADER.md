@@ -57,13 +57,37 @@ HTTP 200 with the upstream chat completion. The analysis JSON is at
   "warnings": ["risks, data gaps, insufficient_evidence flags"],
   "suggestions": [{ "type": "investigate | calibrate | monitor", "area": "…", "reason": "…" }],
   "patterns": [{ "failure_code": "MIN_OUT_FAILED", "count": 3, "interpretation": "economic" }],
-  "trade_authorization": false
+  "trade_authorization": false,
+  "control_review": {
+    "candidate_id": "exact candidate_id from request",
+    "decision": "approve | veto | abstain",
+    "confidence": 0.0,
+    "risk_flags": [],
+    "reason": "short evidence-based supervisory review"
+  }
 }
 ```
 
 `trade_authorization` is always `false` — the AI has no execution authority.
 The deterministic engine (exact quote → economic gate → risk → policy firewall)
 remains authoritative. AI output is soft information only.
+
+For the coordinated LEEF Trader dual-CONTROL flow, an `opportunity_explanation`
+task may include `data.control_review_request`. The preset then requires an
+additional `control_review` object in the same response. It must echo the exact
+`candidate_id` and return only an `approve`, `veto`, or `abstain` decision,
+a numeric confidence, `risk_flags` array, and short reason. An `approve` is
+only a strategic second opinion on that exact Jev proposal — it is not
+`trade_authorization` and cannot create, size, route, or submit a trade.
+Missing, malformed, mismatched, or uncertain reviews are rejected by the
+trading app and pause new entries while dual CONTROL is active.
+
+**Deployment note:** updating this preset changes future generated Worker
+scripts; it does not alter an already-deployed Cloudflare Worker automatically.
+After this change is merged, redeploy the LEEF Trader AI Worker from the Signer
+so its server-controlled system prompt includes the `control_review` contract.
+Keep the trader in SUGGEST/paper mode until the deployed Worker has passed the
+approve, veto, abstain, malformed-response, and candidate-mismatch checks.
 
 ## Failure modes (fail-safe by design)
 
