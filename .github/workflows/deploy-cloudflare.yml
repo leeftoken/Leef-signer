@@ -1,0 +1,102 @@
+name: Deploy LEEF Signer Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/signer/runtime/**"
+      - "src/lib/signer/templates.ts"
+      - "src/lib/signer/manifest.ts"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-cloudflare.yml"
+  pull_request:
+    paths:
+      - "src/lib/signer/runtime/**"
+      - "src/lib/signer/templates.ts"
+      - "src/lib/signer/manifest.ts"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-cloudflare.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: leef-signer-cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Test and build Worker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Runtime syntax tests
+        run: npm run test:syntax
+
+      - name: Build signer site
+        run: npx vite build -l error && cp dist/index.html dist/404.html
+
+      - name: Generate and validate production Worker
+        run: npm run build:worker
+
+      - name: Upload generated Worker artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: leef-trader-ai-worker
+          path: dist-worker/worker.mjs
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Cloudflare production
+    needs: validate
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Generate exact production Worker source
+        run: npm run build:worker
+
+      - name: Require Cloudflare deployment credentials
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
+        run: |
+          test -n "$CF_API_TOKEN" || { echo "::error::Add the CF_API_TOKEN repository/environment secret."; exit 1; }
+          test -n "$CF_ACCOUNT_ID" || { echo "::error::Add the CF_ACCOUNT_ID repository/environment secret."; exit 1; }
+
+      - name: Upload and deploy Worker (preserve existing secrets)
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
+          WORKER_NAME: leef-trader-ai
+          WORKER_SUBDOMAIN: leef-trader-ai.leef-trader.workers.dev
+        run: node scripts/deploy-worker.mjs
