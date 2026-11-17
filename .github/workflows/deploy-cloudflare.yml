@@ -67,11 +67,9 @@ jobs:
   deploy:
     name: Deploy to Cloudflare production
     needs: validate
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    environment:
-      name: cloudflare-production
-    steps:
+      steps:
       - name: Checkout
         uses: actions/checkout@v4
 
