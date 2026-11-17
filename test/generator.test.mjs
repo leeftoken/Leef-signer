@@ -190,3 +190,96 @@ test('LEEF Trader preset keeps strategic review candidate-bound and non-authoriz
   assert.match(template, /"trade_authorization": false/);
   assert.match(template, /If no .*control_review_request.* is present, omit .*control_review.*/);
 });
+
+
+/* ------------------------------------------------------------------ */
+/* TypeSafe /api/judge — the shared Jev contract                       */
+/* ------------------------------------------------------------------ */
+
+const JEV_MANIFEST = {
+  version: '1',
+  app: 'jev-test',
+  runtimeVersion: '0.0.0-test',
+  security: { allowedOrigins: ['https://example.com'], publicAuth: { type: 'none' }, internalMode: false },
+  limits: {
+    default: { keyBy: 'ip', requestsPerMinute: 60 },
+    perRoute: { '/api/judge': { keyBy: 'ip', requestsPerMinute: 60 } },
+  },
+  privacy: { mode: 'privacy' },
+  routes: { '/api/judge': 'judge' },
+  providers: {
+    judge: {
+      type: 'typesafe',
+      endpoint: 'https://api.typesafe.ai',
+      model: 'jev-latest',
+      maxQuestions: 32,
+      maxStateChars: 65_536,
+      timeoutMs: 5_000,
+      secretName: 'TYPESAFE_API_KEY',
+    },
+  },
+};
+
+function judgeRequest(questions, state = { task: 'volume_candidate_review' }) {
+  return new Request('https://w.example/api/judge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.44' },
+    body: JSON.stringify({ state, questions }),
+  });
+}
+
+test('/api/judge accepts 24 typed questions and forwards the fixed model via the gateway', async () => {
+  const { worker, cleanup } = await loadWorker(JEV_MANIFEST);
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  const questions = Object.fromEntries(
+    Array.from({ length: 24 }, (_, i) => [
+      'q' + i,
+      { type: 'noul', instructions: 'Evaluate the supplied test evidence.', criteria: { true: 'yes', false: 'no' } },
+    ]),
+  );
+  const answers = Object.fromEntries(
+    Object.keys(questions).map((qid) => [qid, { type: 'noul', noul: 0.1 }]),
+  );
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), headers: new Headers(init.headers), body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ model: 'jev-latest', answers, usage: { input_tokens: 10, output_tokens: 2 } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  try {
+    const response = await worker.fetch(judgeRequest(questions), { TYPESAFE_API_KEY: 'test-secret' });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.model, 'jev-latest');
+    assert.equal(Object.keys(result.answers).length, 24);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://api.typesafe.ai/v1/systemone');
+    assert.equal(calls[0].body.model, 'jev-latest');
+    assert.equal(Object.keys(calls[0].body.questions).length, 24);
+    assert.equal(calls[0].headers.get('authorization'), 'Bearer test-secret');
+  } finally {
+    globalThis.fetch = realFetch;
+    cleanup();
+  }
+});
+
+test('/api/judge rejects malformed upstream answers instead of returning HTTP 200 with ok:false', async () => {
+  const { worker, cleanup } = await loadWorker(JEV_MANIFEST);
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('{not-json', { status: 200 });
+  try {
+    const response = await worker.fetch(
+      judgeRequest({ action: { type: 'noul', instructions: 'Is this safe?' } }),
+      { TYPESAFE_API_KEY: 'test-secret' },
+    );
+    assert.equal(response.status, 502);
+    const result = await response.json();
+    assert.equal(result.error.code, 'UPSTREAM_ERROR');
+    assert.match(result.error.message, /invalid answer payload/i);
+  } finally {
+    globalThis.fetch = realFetch;
+    cleanup();
+  }
+});
