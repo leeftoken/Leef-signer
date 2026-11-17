@@ -187,7 +187,7 @@ const typesafeProvider = z.object({
   model: z.string().min(1, 'Model is required').max(60).default('jev-latest'),
   providerName: z.string().max(60).default('TypeSafe (Jev)'),
   /** Max questions per forwarded request (TypeSafe-validated upstream). */
-  maxQuestions: z.number().int().min(1).max(32).default(16),
+  maxQuestions: z.number().int().min(1).max(32).default(32),
   /** Cap on serialized state forwarded upstream, in characters. */
   maxStateChars: z.number().int().min(100).max(262_144).default(65_536),
   timeoutMs: z.number().int().min(1000).max(120_000).default(15_000),
