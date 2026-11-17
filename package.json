@@ -7,7 +7,8 @@
     "dev": "npm i --silent && vite",
     "build": "npm i --silent && vite build -l error && cp dist/index.html dist/404.html && echo 'Project built successfully!'",
     "test": "npm i --silent && tsc --noEmit && eslint --cache && vitest run --reporter=dot --silent && vite build -l error && cp dist/index.html dist/404.html && echo 'All tests passed!'",
-    "test:syntax": "node --test test/generator.test.mjs"
+    "test:syntax": "node --test test/generator.test.mjs",
+    "build:worker": "node scripts/build-worker.mjs"
   },
   "dependencies": {
     "@nostrify/nostrify": "^0.55.1",
