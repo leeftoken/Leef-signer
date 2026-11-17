@@ -94,6 +94,40 @@ You'll need:
 The wizard walks you through Application → Cloudflare → Template → Providers → Security →
 Limits → Review → Deploy, then hands you a `*.workers.dev` URL and a live health check.
 
+## Automatic Cloudflare Worker deployment
+
+Production Worker deployments are automated from `main`. Changes to the runtime,
+LEEF preset, manifest, or deployment scripts trigger the pipeline:
+
+1. Install the locked dependencies and run the runtime syntax tests.
+2. Build the signer site and generate the Worker from the current repository source.
+3. Validate the generated Worker as an ES module and check its required routes.
+4. Upload it to the `leef-trader-ai` Cloudflare Worker.
+5. Preserve existing Cloudflare Worker Secret bindings and verify the live
+   `/api/status` response confirms PPQ and TypeSafe are configured.
+
+Pull requests run validation/build checks but never deploy production. Failed
+checks block deployment. The workflow does not read, print, or store provider
+secret values.
+
+### One-time GitHub Actions setup
+
+In GitHub → **Settings → Secrets and variables → Actions**, add:
+
+- `CF_API_TOKEN`: a Cloudflare API token scoped to the target account with
+  **Account → Workers Scripts → Edit** permission.
+- `CF_ACCOUNT_ID`: the Cloudflare account ID containing `leef-trader-ai`.
+
+These are deployment credentials, not PPQ/Jev provider keys. Keep
+`PPQ_API_KEY`, `TYPESAFE_API_KEY`, Telegram tokens, and other provider
+credentials in Cloudflare Worker Secrets. Add or rotate those directly in
+Cloudflare (or through the Signer's write-only Owner secrets page); no provider
+key needs to be copied into GitHub or this repository.
+
+After the two GitHub Actions secrets are configured, each qualifying merge to
+`main` deploys automatically. You can also use **Actions → Deploy LEEF Signer
+Worker → Run workflow** on `main` for a controlled redeploy.
+
 ## Docs
 
 See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the data flow, provider-adapter model, security
