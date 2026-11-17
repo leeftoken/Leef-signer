@@ -301,7 +301,7 @@ function validateTypesafeBody(cfg, raw, ctx) {
   const maxQuestions =
     typeof cfg.maxQuestions === 'number' && cfg.maxQuestions > 0
       ? Math.min(Math.floor(cfg.maxQuestions), TS_MAX_QUESTIONS)
-      : 16;
+      : TS_MAX_QUESTIONS;
   const maxStateChars =
     typeof cfg.maxStateChars === 'number' && cfg.maxStateChars > 0
       ? Math.min(Math.floor(cfg.maxStateChars), 262_144)
