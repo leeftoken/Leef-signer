@@ -114,9 +114,9 @@ secret values.
 
 In GitHub → **Settings → Secrets and variables → Actions**, add:
 
-- `CF_API_TOKEN`: a Cloudflare API token scoped to the target account with
+- **Actions secret** `CF_API_TOKEN`: a Cloudflare API token scoped to the target account with
   **Account → Workers Scripts → Edit** permission.
-- `CF_ACCOUNT_ID`: the Cloudflare account ID containing `leef-trader-ai`.
+- **Actions variable** `CF_ACCOUNT_ID`: `5f083cca68edce6a09b40f9071f88aae` (the account hosting `leef-trader-ai`).
 
 These are deployment credentials, not PPQ/Jev provider keys. Keep
 `PPQ_API_KEY`, `TYPESAFE_API_KEY`, Telegram tokens, and other provider
@@ -124,7 +124,7 @@ credentials in Cloudflare Worker Secrets. Add or rotate those directly in
 Cloudflare (or through the Signer's write-only Owner secrets page); no provider
 key needs to be copied into GitHub or this repository.
 
-After the two GitHub Actions secrets are configured, each qualifying merge to
+After the GitHub Actions secret and variable are configured, each qualifying merge to
 `main` deploys automatically. You can also use **Actions → Deploy LEEF Signer
 Worker → Run workflow** on `main` for a controlled redeploy.
 
