@@ -50,7 +50,7 @@ jobs:
         run: npm run test:syntax
 
       - name: Build signer site
-        run: npm run build
+        run: npx vite build -l error && cp dist/index.html dist/404.html
 
       - name: Generate and validate production Worker
         run: npm run build:worker
