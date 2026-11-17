@@ -468,7 +468,31 @@ async function typesafeHandle(ctx, cfg) {
   try {
     data = JSON.parse(text);
   } catch {
-    data = { ok: false };
+    data = null;
+  }
+  const answers = data && data.answers;
+  const validAnswers =
+    !!answers &&
+    typeof answers === 'object' &&
+    !Array.isArray(answers) &&
+    Object.values(answers).length > 0 &&
+    Object.values(answers).every((answer) =>
+      !!answer &&
+      typeof answer === 'object' &&
+      !Array.isArray(answer) &&
+      typeof answer.type === 'string',
+    );
+  if (!validAnswers) {
+    return {
+      response: errorResponse(
+        'UPSTREAM_ERROR',
+        'TypeSafe returned an invalid answer payload',
+        502,
+        ctx.request,
+        ctx.allowed,
+        ctx.requestId,
+      ),
+    };
   }
   return { response: jsonResponse(data, 200, ctx.request, ctx.allowed) };
 }
