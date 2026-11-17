@@ -88,7 +88,7 @@ jobs:
       - name: Require Cloudflare deployment credentials
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
         run: |
           test -n "$CF_API_TOKEN" || { echo "::error::Add the CF_API_TOKEN repository/environment secret."; exit 1; }
           test -n "$CF_ACCOUNT_ID" || { echo "::error::Add the CF_ACCOUNT_ID repository/environment secret."; exit 1; }
@@ -96,7 +96,7 @@ jobs:
       - name: Upload and deploy Worker (preserve existing secrets)
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
           WORKER_NAME: leef-trader-ai
           WORKER_SUBDOMAIN: leef-trader-ai.leef-trader.workers.dev
         run: node scripts/deploy-worker.mjs
