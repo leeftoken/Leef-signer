@@ -91,7 +91,7 @@ jobs:
           CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
         run: |
           test -n "$CF_API_TOKEN" || { echo "::error::Add the CF_API_TOKEN repository/environment secret."; exit 1; }
-          test -n "$CF_ACCOUNT_ID" || { echo "::error::Add the CF_ACCOUNT_ID repository/environment secret."; exit 1; }
+          test -n "$CF_ACCOUNT_ID" || { echo "::error::Add CF_ACCOUNT_ID as a GitHub Actions repository or environment variable (Settings → Secrets and variables → Actions → Variables)."; exit 1; }
 
       - name: Upload and deploy Worker (preserve existing secrets)
         env:
